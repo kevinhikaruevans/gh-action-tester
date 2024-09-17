@@ -13,10 +13,6 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v3
 
-      # Set up GitHub CLI
-      - name: Install GitHub CLI
-        uses: actions/gh-cli@v1
-
       # Fetch the PR commits
       - name: Get the list of commits in the pull request
         id: get_commits
