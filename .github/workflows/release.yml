@@ -1,10 +1,13 @@
 name: Create Release from Prerelease
 
-on: release
+on: pull_request
 
 jobs:
   say-hello:
     runs-on: ubuntu-latest
     steps:
       - name: Echo Hello World
-        run: echo "Hello World"
+        run: |
+          echo "Hello World"
+          echo "SHA=${GITHUB_SHA}"
+          echo "REF=${GITHUB_REF}"
