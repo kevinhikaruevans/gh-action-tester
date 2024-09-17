@@ -21,7 +21,7 @@ jobs:
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           COMMITS=$(gh pr view $PR_NUMBER --json commits --jq '.commits[].oid')
-          echo "COMMITS=$COMMITS" >> $GITHUB_ENV
+          echo "COMMITS=$COMMITS" >> $GITHUB_OUTPUT
 
       # Find the associated release (by scanning the commits)
       - name: Find release associated with the commits
@@ -30,14 +30,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           RELEASE_FOUND=false
-          for COMMIT in $COMMITS; do
+          for COMMIT in ${{steps.get_commits.outputs.COMMITS}}; do
             # Check if the commit has an associated tag and release
             TAG=$(gh api repos/${{ github.repository }}/git/matching-refs/tags --jq ".[] | select(.object.sha == \"$COMMIT\").ref")
             if [ -n "$TAG" ]; then
               RELEASE=$(gh release list --json tagName --jq ".[] | select(.tagName == \"$TAG\")")
               if [ -n "$RELEASE" ]; then
                 echo "Found release associated with tag: $TAG"
-                echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+                echo "RELEASE_TAG=$TAG" >> $GITHUB_OUTPUT
                 RELEASE_FOUND=true
                 break
               fi
