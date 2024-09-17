@@ -1,13 +1,55 @@
-name: Create Release from Prerelease
+name: Find Associated Release
 
-on: pull_request
+on:
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
-  say-hello:
+  find-release:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Echo Hello World
+      # Checkout the repo
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+
+      # Set up GitHub CLI
+      - name: Install GitHub CLI
+        uses: actions/gh-cli@v1
+
+      # Fetch the PR commits
+      - name: Get the list of commits in the pull request
+        id: get_commits
         run: |
-          echo "Hello World"
-          echo "SHA=${GITHUB_SHA}"
-          echo "REF=${GITHUB_REF}"
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq '.commits[].oid')
+          echo "COMMITS=$COMMITS" >> $GITHUB_ENV
+
+      # Find the associated release (by scanning the commits)
+      - name: Find release associated with the commits
+        id: find_release
+        run: |
+          RELEASE_FOUND=false
+          for COMMIT in $COMMITS; do
+            # Check if the commit has an associated tag and release
+            TAG=$(gh api repos/${{ github.repository }}/git/matching-refs/tags --jq ".[] | select(.object.sha == \"$COMMIT\").ref")
+            if [ -n "$TAG" ]; then
+              RELEASE=$(gh release list --json tagName --jq ".[] | select(.tagName == \"$TAG\")")
+              if [ -n "$RELEASE" ]; then
+                echo "Found release associated with tag: $TAG"
+                echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+                RELEASE_FOUND=true
+                break
+              fi
+            fi
+          done
+
+          if [ "$RELEASE_FOUND" = false ]; then
+            echo "No release found associated with the PR commits."
+            exit 1
+          fi
+
+      # Output the found release
+      - name: Output release
+        run: |
+          echo "Associated release tag: $RELEASE_TAG"
