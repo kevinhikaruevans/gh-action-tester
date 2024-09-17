@@ -13,24 +13,17 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v3
 
-      # Fetch the PR commits
-      - name: Get the list of commits in the pull request
-        id: get_commits
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq '.commits[].oid')
-          echo "COMMITS=$COMMITS" >> $GITHUB_OUTPUT
-
       # Find the associated release (by scanning the commits)
       - name: Find release associated with the commits
         id: find_release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          COMMITS=$(gh pr view $PR_NUMBER --json commits --jq '.commits[].oid')
+
           RELEASE_FOUND=false
-          for COMMIT in ${{steps.get_commits.outputs.COMMITS}}; do
+          for COMMIT in $COMMITS; do
             # Check if the commit has an associated tag and release
             TAG=$(gh api repos/${{ github.repository }}/git/matching-refs/tags --jq ".[] | select(.object.sha == \"$COMMIT\").ref")
             if [ -n "$TAG" ]; then
